@@ -87,3 +87,48 @@
 - threads são sequências de execução dentro do mesmo processo, compartilhando o mesmo espaço de memória e recursos
 - dentro de um único processo, várias threads podem existir, cada uma executando diferentes partes do programa
 - paralelismo vs concorrência: com múltipos CPUs conseguimso atingir paralelismo. Com apenas um núcleo, trabalhamos de forma concorrente(simulando paralelismo)
+- threads, obviamente, ocupam menos espaço na memória do que um processo, pois elas compartilham a mesma memória do processo
+- cada thread possui sua stack indepentente e isolada
+- cada thread ocupa ~= 2MB(linux)
+- cada thread, no go, ocupa 2KB
+
+
+---
+
+
+## Runtime Architecture
+- goroutines = threads do go, também conhecidas como light-threads, green-threads, vitual-threads, etc
+- scheduler = scheduler do go; ajuda no agendamento da execução das goroutines
+- channels = para trabalhar de forma concorrente e possibilitar comunicação e sincronização entre treads(goroutines)
+- memory-allocation
+- garbage-collector
+- stack management
+- network-poller
+- reflection
+
+
+
+## Padrão M:N
+- Threads Virtuais(threads geradas pela linguagem de programação) vs Threads Reais(gerados pelo SO)
+- Modelo de agendamento de tarefas
+    - M: threads virtuais em "user land, green threds, light threads"
+    - N: threads reais do sistema operacional
+    - M tarefas para N threads
+
+
+
+## Goroutines
+- funções/métodos que são executadas de forma concorrente
+- são "threads" gerenciadas pelo runtime do go
+- muito mais "baratas" do que criar novas threads no sistema operacional(2KB)
+- muito mais rápido de criar e destruir
+- compartilham os mesmos endereços de memória do programa em go. Possuam stacks independentes
+
+
+
+## Padrão M:P:G
+- machine < processor > goroutine
+- quando o go inicia, ele cria as threads reais e "gruda" 1 processor por machine
+- em geral, será 1 processador lógico por machine
+- ao longo da execução do programa, novas threads reais podem ser criadas
+- o processador lógico é quem faz o link com a goroutine, e ele é quem fala com a thread real
