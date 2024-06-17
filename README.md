@@ -132,3 +132,58 @@
 - em geral, será 1 processador lógico por machine
 - ao longo da execução do programa, novas threads reais podem ser criadas
 - o processador lógico é quem faz o link com a goroutine, e ele é quem fala com a thread real
+
+
+
+## runtime.GOMAXPROCS()
+- go cria um P(processor) por Núcleo Computacional
+- go tente a criar um M(Machine - Threads) para atribuir para cada P
+- o valor de uma Machine por processor não é fixo
+    - go pode criar mais threads no SO se as atuais estiverem bloqueadas por I/O ou outro motivo de executar as Goroutines
+    - o objetivo é sempre manter os Ps ocupados, sem tempo ocioso
+
+
+
+## Scheduler: Pool de Ps
+- gestão de como e quando as tarefas são executadas em threas do sistema operacional
+- decide qual tarefa deve ser executada em qual thread e em que momento
+- gerencia o balanceamento de carga entre diferentes threads ou processadores lógicos, garantindo que nenhuma thread fique sobrecarregada enquanto outras estão ociosas
+- gerencia questões como sincronização, mutex, racing conditions, deadlocks, etc
+
+
+
+## Scheduler no Go
+- o trabalho do Scheduler é combinar em G(o código a ser executado), um M(onde executá-lo) e um P(os direitos e recursos para executá-lo).
+- quando um M para de executar um código Go do usuário, por exemplo, ao entrrar em uma syscall, ele devolve seu P para o pool de P ociosos.
+- para retomar a execução do código Go do usuário, por exemplo, ao retornar de uma syscall, ele deve adquirir um P do pool de ociosos.
+- https://go.dev/src/runtime/HACKING
+- detalhamento
+    - scheduler faz parte do runtime. Trabalha de forma adaptativa
+        - atribuição de tarefas
+        - balanciamento de carga
+        - gerenciamento de concorrência
+    - trabalha de forma não cooperativa com preempção(versão >= 1.14)
+
+
+
+## Scheduler no Go vs Goroutines
+- scheduler determina o estado de cada goroutine
+    - running
+    - runnable(fila)
+    - not runnable(bloqueada fazendo I/O, por exemplo)
+- work stealing
+    - se o P está ocioso(idle)
+    - ele rouba goroutines de outro P ou mesmo da fila global de goroutines
+        - verifica 1/61 do tempo, evitando overhead para evitar buscar na fila global o tempo todo
+
+
+
+## Preempção no Go
+- sinalização de preempção
+    - nivel de sistema
+        - go insere pontos de premepção usando recursos do SO(exemplo: signals)
+    - verificação de pontos onde as goroutines podem ser seguramente interrompidas
+        - localizados em funções que são chamadas de forma frequente / loops
+    - funções longas
+        - se uma função está sendo executada sem chamar outras funções ou fazendo I/O por muito tempo, ela está desafiando o scheduler. Logo, o go internamente vai realizar a preempção mesmo sem ter os pontos de sinalizadores
+ 
