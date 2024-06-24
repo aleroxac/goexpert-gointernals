@@ -186,4 +186,22 @@
         - localizados em funções que são chamadas de forma frequente / loops
     - funções longas
         - se uma função está sendo executada sem chamar outras funções ou fazendo I/O por muito tempo, ela está desafiando o scheduler. Logo, o go internamente vai realizar a preempção mesmo sem ter os pontos de sinalizadores
- 
+
+
+
+## Memória
+### Conceitos básicos
+- memória de acesso rápido; memória que fica no chip da CPU, utilizada como cache
+    - l1: 64kb
+    - l2: 0.5mb
+    - l3: 8mb
+- memória de acesso lento
+    - DDR(double data rate); clock consegue ter acesso 2 vezes por ciclo
+    - é ligada através de um barramento(canais de comunicação entre CPu e a memória)
+- endereços de memória são referenciados em formato hexadecimal(de 0-9 e de A-F)
+### Custo de memória
+- threads, obviamente, ocupam menos espaço na memória do que um processo, pois elas compartilham a mesma memória do processo
+- cada thread possui sua stack independente e isolada
+- cada thread ocupa, em média, 2MB(linux)
+- stack < heap < static data < literals < instructions
+- function_c() > function_b() > function_a() > free memory space
