@@ -205,3 +205,35 @@
 - cada thread ocupa, em média, 2MB(linux)
 - stack < heap < static data < literals < instructions
 - function_c() > function_b() > function_a() > free memory space
+### heap
+- dynamic memory allocation
+    - large memory pool; a heap pega um bloco de memória para si, que é muito maior do que a stack
+    - flexibilidede; possibilitando organizar informações em diversos locais de memória
+    - acessível globalmente
+    - reutilizável
+    - suporta estruturas complexas
+    - gerenciamento completo
+    - leaks
+    - fragmentação; buracos nos blocos de memória causados durante processos de alocação e desalocação
+    - mais lento que a stack
+    - concorrência
+### Fragmentação
+- falsa sensação de que existe o espaço necessário na memória, mas quando temos blocos de dados maiores e que precisam ficar juntos, percebemos que não temos esse espaço
+- arenas
+    - blocos de espaço em memória, uma separação lógica para execução alguma tarefa; também possibilitando fazer subdivisões
+    - subdivisão da heap em chunks
+        - por velocidade
+            - fast bin
+            - small bin
+            - large bin
+        - por tamanho
+            - 8KB
+            - 64KB
+            - >1MB
+- alocadores
+    - alocadores mais populares
+        - malloc/free (C std library)
+        - dlmalloc(Doug Lea's Malloc) - Não suporta de forma eficiente Multithreading
+        - ptmalloc / ptmalloc2 (pthreads Malloc) - Utilização de arenas
+        - jemalloc (Jason Evans) - otimizado por Facebook, Rust, Postgres
+        - TCMalloc (Thread-Caching Malloc) - Google
