@@ -251,3 +251,68 @@
   - gerenciamento de memória
     - separa os chunks em spans, que são blocos de páginas da memória heap
     - mheap[ N[spans] ] > N[mcentral(gerencia spans de N diversos tamanhos)] > N[mcache(cache local)]
+- garbage collector
+    - o garbage collector(GC) é um mecanismo automático de gerenciamento de memória que busca, identifica e libera memória que não está mais sendo utilizada pelo grograma. Isso é crucial para previnir vazamentos de memória e garantir a eficiência do uso de memória
+    - caracteristicas do GC do go:
+        - não-geracional: trata todos os objetos igualmente, sem distinção entre objetos novos e antigos
+        - concorrente: executa a maior parte do trabalho de coleta de lixo concorrentemente com a aplicação, minimizando as pausas
+        - baseado na técnica de "Tri-color Mark and Sweep": utiliza o algoritmo de marcação e varredura com tês cores(branco, cinza e preto) para gerenciar os objetos
+    - objetos alcançáveis
+        -  podem ser acessados direta ou indiretamente por referência em um ponto de entrada no programa
+            - roots: são os pontos de entrada iniciais para a busca de objetos alcançáveis. Incluem variáveis globais, variáveis locais atualmente ativas nas stacks de execução, e registros de CPU
+            - objetos referenciados: qualquer objeto que é referenciado direta ou indiretamente a partir de um objeto root
+        - exemplos
+            - 01
+                - se uma variável global referencia um objeto A, e o objeto A referencia um objeto B, então ambos os objetos A e B são alcançáveis
+            - 02
+                - uma variável global globalVar refenrecia o objeto A
+                - o objeto A referencia um objeto B
+                - o objeto B referencia um objeto C
+                - o objeto D não é referenciado por nenhum outro objeto
+                - A, B e C são alcançáveis porque podem ser acessados a partir da variável global globalVar. O objeto D é inalcançável porque não há nenhuma referência a ele a partir das raízes ou de outros objetos alcançáveis
+    - dinamica
+        - aplicação > GC > write barrier> 
+        - GC:
+            - 1. SWT(Stop the World): para a execução do programa para rodar o GC
+                - Write Barrier: intercepta e pausa todas as chamadas do programa
+                - Mark Setup
+            - 2. Marking Work(concurrent) - nesse momento o programa volta a ser executado, o resto do trabalho vai ser feito concorrentemente
+                - 25% do CPU é alocado para fazer o processo de marcação de objetos alcançáveis
+                - Mark Assist: pega outras goroutines para trabalhar junto com o GC para ajudar a fazer as marcações
+                    - branco: objeto ainda não explorado
+                    - cinza: objetos alcançáveis
+                        - pendentes de processamento
+                        - precisa buscar por referência
+                        - trabalha de forma recursiva
+                    - preto: objeto já explorado
+            - 3. Mark Termination: novamente interrompe a execução do programa e faz a varredura em busco de novos objetos alcançáveis
+                - finaliza a marcação
+                - desliga o Write Barrier
+            - Sweeping(Concorrente)
+                - identifica e libera a memória de objetos não alcançáveis
+                - varredura on-demand
+    - GOGC
+        - define o tamanho da heap quando o GC deve ser acionado
+        - por padrão é 100%
+        - exemplo
+            - se a heap após a última coleta de lixo for de 4MB e o GC Percentage estiver definido como 100%, o próximo GC será acionado quando o tamanho total do heap atingir 8MB(4MB + 100% disso, ou seja, mais 4MB, totalizando 8MB)
+        - quanto mais baixo o número, mais frequente sera ativado o GC
+        - GOGC=100 (variável de ambiente)
+    - GC Trace
+        ```
+        gc 1 @0.019s 0%:0.014+0.56+0.010 ms clock, 0.029+0/0.55/0+0.021 ms cpu, 4->4->1 MB, 5MB goal, 8 P
+        ```
+        - gc 1: numero do clico de GC< começando em 1 para o primeiro GC que ocorre após a inicialização do programa
+        - @0.019s: o tempo desde o início do programa até o início deste ciclo de GC
+        - 0%: a porcentagem do tempo total do programa gasto em GC até este ponto
+        - 0.014+0.56+0.010 ms clock
+            - 0.014: antes da coleta - este valor indica o tempo gasto antes de iniciar efetivamente a fase concorrente de marcação(marking). Pode incluir preparações iniciais e o tempo para iniciar a coleta de lixo. O "0.014ms" sugere que foram gastos 14 microssegundos em atividades preliminares antes de iniciar a marcação propriamente dita.
+            - 0.56: fase concorrente - o valor "0.56ms" representa o tempo gasto na fase concorrente do GC< que geralmente envolve a marcação(marking) de objetos alcançáveis no heap. Durante esta fase, o programa continua em execução normalmente. enquanto o GC trabalha para identificar quais objetos ainda estão sendo usados. Os 560 microssegundos indicam o tempo total despendido nessa atividade concorrente.
+            - 0.010: finalização da coleta - o "0.010ms" é o tempo gasto aós a fase concorrente, incluindo a finalização da marcação e a preparação para a fase de varredura(sweep). Esses 10 microssegundos podem cobrir a conclusão do trabalho de marcação e as atividades de limpesa necessárias antes de o GC prosseguir para a próxima etapa.
+        - 0.029+0/0.55/0+0.021 ms cpu
+            - 0.029+0: indica o tempo gasto na fase de STW_SWEEP_TERMINATION. "0.029" é o tempo de STW para esta fase, e o "+0" indica que não houve tempo adicional significativo gasto após a pausa inicial
+            - 0.55: tempo gasto na fase de marcação e varredura(MARK_AND_SWEEP) que é feita de forma concorrente, sem STW. "0.55" indica o tempo gasto nessa fase
+            - 0+0.021: tempo gasto na fase de STW_MARK_TERMINATION. "0" indica que não houve tempo inicial de STW sifnificativo antes dessa fase, e "+0.021" é o tempo de pausa STW para finalizar a marcação.
+        - 4->4->1 MB: tamanho do heap antes do GC, o tamanhho do heap ao determinar iniciar o GC, e o tamanho do heap após o GC, respectivamente
+        - 5MB goal: o tamanho alvo do heap para o próximo GC, baseado na heurística do GC para tentar manter o tempo de pausa ou a frequência do GC dentro de limites desejáveis
+        - 8P: número de processadores lógicos(P's) usados pelo Go scheduler
