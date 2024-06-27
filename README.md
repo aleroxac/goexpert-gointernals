@@ -237,3 +237,17 @@
         - ptmalloc / ptmalloc2 (pthreads Malloc) - Utilização de arenas
         - jemalloc (Jason Evans) - otimizado por Facebook, Rust, Postgres
         - TCMalloc (Thread-Caching Malloc) - Google
+
+## Memória no Go
+- utiliza como baseo TCMalloc(desenvolvido pelo Google)
+  - ao longo do tempo, o alocador tomou diferentes caminhos do TCMalloc
+  - o próprio runtime do Go é responsável por trabalhar com a alocação de memória
+- nome do alocador é 'mallocgc'
+  - flow: G(goroutine) > P(processor) > mcache > mcentral > mheap > OS
+  - tipos
+    - tiny: objetos < 16 bytes
+    - small: objetos entr 16 e 32KB
+    - large: objetos > 32KB
+  - gerenciamento de memória
+    - separa os chunks em spans, que são blocos de páginas da memória heap
+    - mheap[ N[spans] ] > N[mcentral(gerencia spans de N diversos tamanhos)] > N[mcache(cache local)]
