@@ -316,3 +316,18 @@
         - 4->4->1 MB: tamanho do heap antes do GC, o tamanhho do heap ao determinar iniciar o GC, e o tamanho do heap após o GC, respectivamente
         - 5MB goal: o tamanho alvo do heap para o próximo GC, baseado na heurística do GC para tentar manter o tempo de pausa ou a frequência do GC dentro de limites desejáveis
         - 8P: número de processadores lógicos(P's) usados pelo Go scheduler
+
+        - clock-time: tempo total que o GC está tomando do ponto de vista de um observador externo. Isso inclui todos os aspectos de execução e espera. Tempo, do início ao fim
+        - cpu-time: tempo que a CPU está ativamente trabalhando no GC, excluindo tempos de espera ou quando outras goroutines estão sendo executadas
+
+        - histórico de melhorias do GC
+            - go 1.5: introdução do GC concorrente
+                - substitui o modelo de GC Stop-The-World(STW) por um modelo concorrente, reduzindo significativamente as pausas do GC e melhorando a performance geral das aplicações Go
+            - go 1.8: otimizações no GC
+                - redução das pausas do GC ao aprimorar a eficiência da fase de varredura(sweep) e da assistência de marcação(mark assist)
+            - go 1.14: implementação do Non-Cooperative Preemption
+                - embora não seja uma mudança no GC em si, essa otimização na preempção de goroutines teve impactos positivos na latência do GC, permitindo que o runtime interrompesse goroutines mais eficientemente para garantir que o GC pudesse rodar a tempo
+            - go 1.15 e 1.16: redução de alocações
+                - otimizações nessas versões reduziram as alocações descenessárias, diminuindo a pressão sobre o GC
+            - go 1.19: Soft Memory Limit
+                - introdução de um limite de memória "soft" para o GC, permitindo que os desenvolvedores definam um alvo de uso de memória que o GC tentará respeitar, melhorando a gestão da memória em sistemas com restrições
