@@ -331,3 +331,33 @@
                 - otimizações nessas versões reduziram as alocações descenessárias, diminuindo a pressão sobre o GC
             - go 1.19: Soft Memory Limit
                 - introdução de um limite de memória "soft" para o GC, permitindo que os desenvolvedores definam um alvo de uso de memória que o GC tentará respeitar, melhorando a gestão da memória em sistemas com restrições
+
+
+
+## Channels no Go
+- channels são um mecanismo de comunicação e sincronização entre goroutines no Go. Eles permitem que goroutines troquem dados de maneira segura e eficiente, suportando a construção de programas concorrentes
+
+- o problema da não utilização de channels
+    - problemas de sincronização
+        - quando a G1 quer passar um valor para a G2, ela altera um valor na memória para a G2 ter acesso
+        - o grande problema é que outras goroutines e partes do programa também podem ter acesso aquele endereço de memória
+        - ou a G1 não terminou completamente de alocar o valor em memória e a G2 já fez a leitura e eventualmente uma gravação no mesmo local
+    - dificuldade de trabalhar com concorrência
+        - data race(race condition)
+        - para remediar o problema utilizamos Mutex(Mutual Exclusion)
+            - fazemos um lock no valor na memória e durante esse momento, somente uma goroutine pode fazer alteração. Após isso, esse valor é liberado(unlock)
+            - mutex e similares abrem muita marge para erro, pois tudo isso é feito de forma manual
+    - deadlocks
+        - quando uma goroutine-2 quer acessar algum dado bloqueado na goroutine-1, e a goroutine-1 quer acessar algum dado bloqueado pela goroutine-2, onde acontece o cenário do programa ficar indefinidamente bloqueado nessas 2 goroutines
+
+- a frase que define com mais clareza a utilização de channels
+    - "Do not communicate by sharing memory; instead, share memory by communicating"
+        - essa frase encapsula um dos princípios fundamentais do design de sistemas concorrentes no Go. A ideia é que, ao usar channels para comunicação entre goroutines, você evita muitos dos problemas associados à concorrência e ao compartilhamento de memória direta, como condições de corrida e deadlocks
+        - em vez de várias goroutines acessarem diretamente variáveis compartilhadas(o que requer mecanismos de sincronização como locks), elas se comunicam enviando dados através de channels, o que proporciona uma maneira segura e clara de coordenar o acesso aos dados
+
+- channels são um mecanismo fundamental de comunicação entre goroutines, permitindo a troca segura e sincronizada de dados
+- eles são utilizados para passar informações entre goroutines de forma eficiente, evitando a necessidade de locks explícitos e reduzindo a complexidade da sincronização
+
+- tipos de channels
+    - não-bufferizados: requerem que a operação de envio e recebimento ocorra simultaneamente. Ideal para sincronização direta entre goroutines
+    - bufferizados: permitem que dados sejam armazenados temporariamente no buffer, permitindo que a goroutine de envio ea de recebimento sejam executadas em tempos diferentes
