@@ -361,3 +361,59 @@
 - tipos de channels
     - não-bufferizados: requerem que a operação de envio e recebimento ocorra simultaneamente. Ideal para sincronização direta entre goroutines
     - bufferizados: permitem que dados sejam armazenados temporariamente no buffer, permitindo que a goroutine de envio ea de recebimento sejam executadas em tempos diferentes
+
+- estrutura interna de um channel
+``` go
+type hchan struct {
+    qcount      // total de dados na fila
+    dataqsize   // tamanho da fila circular(buffer)
+    buf         // ponteiro para o array de elementos no buffer
+    elemsize    // tamanho de cada elemento
+    closed      // flag indicando se o channel está fechado
+    sendx       // indice de envio
+    recvx       // indice de recebimento
+    recvq       // fila de goroutines esperando para receber
+    sendq       // fila de goroutines esperando para enviar
+    lock        // mutex para sincronização
+}
+```
+
+- dinâmica de funcionamento
+```
+g1(envio) > 
+    lock > 
+        checa espaço no buffer > 
+            buffer está cheio? > 
+                sim > adiciona a sendq(block)
+                não > coloca nop fuffer na posição sendx > incrementa sendx > libera o lock
+
+g2(recebimento) > 
+    lock > 
+        verifica dados no buffer >
+            buffer vazio >
+                sim > adiciona a recvq(block) - aguardando dados
+                não > retira do buffer na posição recvx > incrementa recvx > libera o lock
+
+g3(fechamento do canal)
+    lock > 
+        set flag closed >
+            notifica goroutines recvq > 
+                libera o lock
+```
+
+- channels bufferizados
+    - altas taxas de produção e consumo
+        - quando há uma diferença significativa nas taxas de produção e consumo de dados entre goroutines, channels não-bufferizados podem causar gargalos
+        - exemplo: se uma goroutine está gerando dados muito mais rápido do que outra pode consumir, a goroutine produtora ficará frequentemente bloqueada esperando que a consumidora esteja pronta para receber, resultando em desempenho ineficiente
+    - pipeline de processamento
+        - em pipelines de processamento de dados, onde os dados passam por várias etapas, cada uma implementada como uma goroutine, o uso de channels não bufferizados pode causar bloqueios frequentes, dificultando o fluxo suave dos dados através do pipeline
+        - exemplo: se uma goroutine está gerando dados muito mais rápido do que outra pode consumir, a goroutine produtora ficará frequentemente bloqueada esperando que a consumidora esteja pronta para receber, resultando em desempenho ineficiente
+    - tarefas assíncronas
+        - quando se trabalha com tarefas que não precisam ser sincronizadas estritamente, como registros de logs ou coleta de métricas, usar channels não-bufferizados pode introduzir latência descenecessária
+        - exemplo: ao registrar logs em um servidor de alta carga, esperar que cada log seja processado antes de prosseguir pode impactar negativamente a performance. Um channel bufferizado permite que a produção de logs continue sem esperar pelo processamento de cada mensagem de log
+    - comunicaçào entre múltiplas goroutines
+        - quando há comunicação entre várias goroutines produtoras e consumidoras, channels não-bufferizados podem aumentar a contenção e reduzir a paralelização efetiva
+        - exemplo: se várias goroutines tentam enviar dados para um único channel não-bufferizado, elas competirão pelo acesso, resultando em bloqueios frequentes e menor desempenho
+    - operações de I/O
+        - em operações de I/O, onde o tempo de espera pode ser significativo, o uso de channels não-bufferizados pode levar a bloqueios desnecessários
+        - exemplo: uma goroutine que lê dados de um arquivo e outra que escreve esses dados em uma rede. Se a escrita na rede for mais lenta, a leitura do arquivo será bloqueada frequentemente
