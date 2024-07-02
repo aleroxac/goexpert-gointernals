@@ -417,3 +417,113 @@ g3(fechamento do canal)
     - operações de I/O
         - em operações de I/O, onde o tempo de espera pode ser significativo, o uso de channels não-bufferizados pode levar a bloqueios desnecessários
         - exemplo: uma goroutine que lê dados de um arquivo e outra que escreve esses dados em uma rede. Se a escrita na rede for mais lenta, a leitura do arquivo será bloqueada frequentemente
+
+- channels não-bufferizados
+    - sincronização estrita
+        - quando é necessário garantir que a propdução e o consumo de dado ocorrem de maneira sincronizada, channels não-bufferizados são ideais. Eles garantem que cada operação de envio seja emparelhada diretamente em uma operação de recebimento
+        ``` go
+            package main
+            
+            import "fmt"
+
+            func main() {
+                done := make(chan bool)
+
+                go func() {
+                    fmt.Println("Goroutine: Working...")
+                    done <- true // Sinaliza que a goroutine terminou o trabalho
+                }()
+
+                <- done // Espera a goroutine terminar
+                fmt.Println("Main: Goroutine completed")
+            }
+        ```
+    - handshake
+        - em situações onde duas goroutines precisam trocar informações ou confirmar que uma ação foi realizada antes de prosseguir, channels não-bufferizados fornecem um mecanismo simples e seguro
+        ``` go
+            package main
+            
+            import "fmt"
+
+            func main() {
+                start := make(chan bool)
+
+                go func() {
+                    fmt.Println("Goroutine: Initializing...")
+                    start <- true // Sinaliza que a inicialização está completa
+                }()
+
+                <- done // Espera a inicializaçào
+                fmt.Println("Main: Initialization completed")
+            }
+        ```
+    - eventos temporizados
+        -  quando você precisa lidar com eventos temporizados, como timeouts, channels não-bufferizados podem ser usados em conjunto com o select para implementar timeouts de maneira simples e eficaz
+         ``` go
+            package main 
+
+            import (
+                "fmt"
+                "time"
+            )
+
+            func main() {
+                ch := make(chan int)
+                
+                go func() {
+                    time.Sleep(2 * time.Second)
+                    ch <- 42
+                }()
+
+                select {
+                case val := <-ch:
+                    fmt.Println("Received:", val)
+                case <-time.After(1 * time.Second):
+                    fmt.Println("Timeout")
+                }
+            }
+         ```
+    - coordenar finalização
+        - quando várias goroutines precisam ser coordenadas para garantir que todas elas completem antes que o programa possa prosseguir, channels não-bufferizados podem ser utilizados para sinalizar a conclusão
+        ``` go
+            package main
+
+            import "fmt"
+
+            func main() {
+                done := make(chan bool)
+                numWorkers := 3
+
+                for i := 0; i < numWorkers; i++ {
+                    go func(id int) {
+                        fmt.Printf("Worker %d: Working...\n", id)
+                        done <- true // Sinaliza que a goroutine terminou o trabalho
+                    }(i)
+                }
+
+                for i := 0; i < numWorkers; i++ {
+                    <-done // Espera cada goroutine terminar
+                }
+
+                fmt.Println("All worker completed")
+            }
+        ```
+
+- parametrização do tamanho do buffer
+    - taxa de produção e consumo
+        - taxa variável: se a taxa de produção e consumo varia significativamente, um buffer maior pode ajudar a suavizar as diferenças e evitar bloqueios frequentes
+        - taxa constante: se as taxas de produção e consumo são constantes e iguais, um buffer menor pode ser suficiente
+    - latência e desempenho
+        - baixa latência: se a latência é crítica, um buffer menor pode ser preferível para garantir que os dados sejam processados rapidamente
+        - alto desempenho: um buffer maior pode ajudar a aumentar o desempenho em sistemas de alta taxa de transferência, reduzindo a contenção entre goroutines
+    - memória disponível
+        - uso de memória: buffers grandes consomem mais memória. Certifique-se de que há memória suficiente disponível e considere o impactor no uso geral do sistema
+    - padronização de pipelines
+        - etapas de pipeline: se você está construindo um pipeline de processamento, cada etapa pode se beneficiar de um buffer que permite processar dados em lotes, melhorando a eficiência geral
+    - resumo
+        - não há um tamanho de buffer único que seja ideal para todos os casos. A escolha do tamanho do buffer deve ser baseada em:
+            - taxa de produção e consumo
+            - requisitos de latência e desempenho
+            - memória disponível
+            - características específicas do seu pipeline de processamento
+            - monitorar e ajustar o tamanho do buffer conforme necessário, juntamente com testes de desempenho, pode ajudar a encontrar o equilíbrio certo para seu caso de uso específico
